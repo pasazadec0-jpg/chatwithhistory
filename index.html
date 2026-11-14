@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ChatWithHistory</title>
+<style>
+:root{--bg:#f4ecd8;--card:#fbf6e9;--ink:#2b2118;--mute:#7a6a55;--accent:#8b2e1f;--line:#d9c9a5;--meink:#fff7ea;--cur:#7a1f1f;--cur2:#a83232;--wall:#efe2c0;--wall2:#cdb88a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1712;--card:#27201a;--ink:#eadfc9;--mute:#a39478;--accent:#d9885f;--line:#40362b;--meink:#fff3e4;--cur:#5a1616;--cur2:#802626;--wall:#4a3c2b;--wall2:#2a2218;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1712;--card:#27201a;--ink:#eadfc9;--mute:#a39478;--accent:#d9885f;--line:#40362b;--meink:#fff3e4;--cur:#5a1616;--cur2:#802626;--wall:#4a3c2b;--wall2:#2a2218;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;line-height:1.5}
+.wrap{max-width:780px;margin:0 auto;padding:16px 14px 36px}
+h1{font-size:clamp(1.5rem,5vw,2.1rem);margin:.2em 0 .6em;text-align:center;color:var(--accent)}
+.lang{display:flex;gap:4px;justify-content:flex-end}.lang button{padding:5px 11px;font-size:.8rem;background:transparent;color:var(--accent);border:1px solid var(--accent)}.lang button.on{background:var(--accent);color:var(--meink)}
+.stage{position:relative;height:min(84vh,660px);border-radius:14px;overflow:hidden;border:3px solid var(--line);background:radial-gradient(ellipse at 50% 30%,var(--wall),var(--wall2));display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.floor{position:absolute;left:0;right:0;bottom:0;height:56px;background:repeating-linear-gradient(90deg,#8a5a34 0 44px,#7a4d2b 44px 88px);box-shadow:inset 0 8px 14px rgba(0,0,0,.35)}
+.cloud{position:relative;z-index:2;width:min(84%,520px);margin:0 0 62px}
+.cb{position:absolute;inset:0;filter:drop-shadow(2.5px 0 0 #2b2118) drop-shadow(-2.5px 0 0 #2b2118) drop-shadow(0 2.5px 0 #2b2118) drop-shadow(0 -2.5px 0 #2b2118)}
+.cb i{position:absolute;background:#fffdf5;border-radius:50%}
+.cb i.bd{inset:0;border-radius:40px}
+.ct{position:relative;padding:20px 28px;max-height:min(26vh,220px);overflow-y:auto;color:#2b2118;font-size:1.02rem;white-space:pre-wrap;text-align:center;display:flex;flex-direction:column;justify-content:center;min-height:70px}
+.ct span{display:block;margin:auto 0}
+.who{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:4;font-size:.85rem;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:2px 14px;white-space:nowrap}
+.who:empty{display:none}
+#char{position:relative;z-index:3;margin-bottom:-4px}
+svg.ch{display:block;width:min(46vw,210px);height:auto}
+.curt{position:absolute;top:0;bottom:0;width:51%;z-index:5;transition:transform 1s ease-in-out;background:repeating-linear-gradient(90deg,var(--cur) 0 18px,var(--cur2) 18px 36px);box-shadow:inset 0 0 40px rgba(0,0,0,.45)}
+.curt.l{left:0;transform:translateX(-100%)}.curt.r{right:0;transform:translateX(100%)}
+.stage.closed .curt{transform:translateX(0)}
+.val{position:absolute;top:0;left:0;right:0;height:26px;z-index:6;background:linear-gradient(var(--cur2),var(--cur));border-bottom:3px solid #d9a93a}
+.talk{animation:bob .5s infinite alternate ease-in-out}
+@keyframes bob{to{transform:translateY(-4px)}}
+.talk .mouth{animation:tk .22s infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes tk{to{transform:scaleY(.3)}}
+.eye{animation:bl 4s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes bl{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.row{display:flex;gap:8px;margin-top:12px}
+input{flex:1;min-width:0;font:inherit;padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button{font:inherit;padding:10px 16px;border:0;border-radius:8px;background:var(--accent);color:var(--meink);cursor:pointer}
+button:disabled{opacity:.5}
+button.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.note{text-align:center;color:var(--mute);font-size:.8rem;margin-top:12px}
+.last{color:var(--mute);font-size:.85rem;margin-top:8px;text-align:right;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lang"><button data-l="az">AZ</button><button data-l="en">EN</button><button data-l="ru">RU</button></div>
+  <h1 id="h1">⏳ ChatWithHistory</h1>
+  <div class="stage" id="stage">
+    <div class="floor"></div>
+    <div class="cloud" id="cloud">
+      <div class="cb"><i class="bd"></i>
+        <i style="left:2%;top:-26px;width:26%;height:62px"></i><i style="left:22%;top:-38px;width:28%;height:74px"></i><i style="left:46%;top:-42px;width:30%;height:80px"></i><i style="left:70%;top:-28px;width:28%;height:64px"></i>
+        <i style="left:4%;bottom:-24px;width:28%;height:56px"></i><i style="left:28%;bottom:-30px;width:30%;height:62px"></i><i style="left:54%;bottom:-26px;width:28%;height:56px"></i><i style="left:74%;bottom:-22px;width:26%;height:52px"></i>
+        <i style="left:-18px;top:16%;width:60px;height:66%"></i><i style="right:-18px;top:16%;width:60px;height:66%"></i>
+        <i style="left:calc(50% - 10px);bottom:-44px;width:26px;height:22px"></i><i style="left:calc(50% + 12px);bottom:-60px;width:15px;height:13px"></i>
+      </div>
+      <div class="ct" id="ct"><span id="tx">…</span></div>
+    </div>
+    <div id="char"></div>
+    <div class="who" id="who"></div>
+    <div class="curt l"></div><div class="curt r"></div><div class="val"></div>
+  </div>
+  <div class="last" id="last"></div>
+  <div class="row"><input id="inp" placeholder="Şəxsiyyətin adını yazın…" autocomplete="off"><button id="btn">Göndər</button><button class="alt" id="back" title="Başqa şəxsiyyət">↺</button></div>
+  <p class="note" id="warn">Cavablar süni intellekt tərəfindən canlandırılır və tam dəqiq olmaya bilər.</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const HEX=/^#[0-9a-f]{6}$/i;
+const HATS=["none","crown","turban","kulah","papaq","laurel","beret","helmet","hood","bicorn","fez","tophat","tall"],ITEMS=["none","scroll","sword","book","quill","globe","staff"],OUT=["robe","coat","armor","tunic","cloak"];
+const MED={name:"",robe:"#4f6a94",trim:"#e0b030",skin:"#e8c39e",hair:"#4a3326",hatc:"#c0392b",hat:"beret",beard:"none",mustache:"none",hairstyle:"short",age:"young",outfit:"coat",item:"scroll",glasses:false};
+const LN={az:"Azərbaycan",en:"ingilis",ru:"rus"};
+const I18N={
+ az:{title:"⏳ ChatWithHistory",greet:"Salam! Bu gün hansı şəxsiyyətlə görüşmək istərdiniz?",ph1:"Şəxsiyyətin adını yazın…",ph2:"Sualınızı yazın…",send:"Göndər",back:"Başqa şəxsiyyət",note:"Cavablar süni intellekt tərəfindən canlandırılır və tam dəqiq olmaya bilər.",noai:"Süni intellekt bu görünüşdə əlçatan deyil. Səhifəni claude.ai hesabınızla açın.",you:"Siz: ",unk:"Bağışlayın, bu adı tarixi şəxsiyyət kimi tanımadım. Başqa ad deyin.",denied:"İcazə verilmədi. Yenidən cəhd edin.",rate:"Çox sorğu göndərildi, bir az gözləyin.",err:"Xəta baş verdi. Yenidən cəhd edin."},
+ en:{title:"⏳ ChatWithHistory",greet:"Hello! Which historical figure would you like to meet today?",ph1:"Type a name…",ph2:"Type your question…",send:"Send",back:"Another figure",note:"Replies are brought to life by AI and may not be fully accurate.",noai:"AI is not available in this view. Open the page with your claude.ai account.",you:"You: ",unk:"Sorry, I don’t recognize that name as a historical figure. Try another one.",denied:"Permission was not granted. Please try again.",rate:"Too many requests, please wait a moment.",err:"Something went wrong. Please try again."},
+ ru:{title:"⏳ ChatWithHistory",greet:"Здравствуйте! С какой исторической личностью вы хотели бы встретиться сегодня?",ph1:"Введите имя…",ph2:"Введите ваш вопрос…",send:"Отправить",back:"Другая личность",note:"Ответы создаёт ИИ, они могут быть неточными.",noai:"ИИ недоступен в этом режиме. Откройте страницу в своём аккаунте claude.ai.",you:"Вы: ",unk:"Простите, я не узнаю это имя как историческую личность. Назовите другое.",denied:"Разрешение не получено. Попробуйте ещё раз.",rate:"Слишком много запросов, подождите немного.",err:"Произошла ошибка. Попробуйте ещё раз."}
+};
+let lang="az";try{const s=localStorage.getItem("lang");if(I18N[s])lang=s}catch(e){}
+const T=k=>I18N[lang][k];
+function applyLang(){document.documentElement.lang=lang;$("h1").textContent=T("title");$("btn").textContent=T("send");$("back").title=T("back");$("warn").textContent=T("note");$("inp").placeholder=mode==="pick"?T("ph1"):T("ph2");document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on",b.dataset.l===lang))}
+async function setLang(l){if(l===lang||busy)return;lang=l;try{localStorage.setItem("lang",l)}catch(e){}applyLang();if(mode==="pick"){show(T("greet"),true);setTimeout(()=>setTalk(false),1800)}else reset()}
+const PRE=[
+[/nizami/i,{robe:"#2f5d50",trim:"#d9a93a",skin:"#d6a97d",hair:"#d8d4cb",hatc:"#7b2d26",hat:"kulah",beard:"long",mustache:"thick",hairstyle:"short",age:"old",outfit:"robe",item:"quill",glasses:false}],
+[/xətai|xetai|ismayıl|ismail/i,{robe:"#a3262a",trim:"#e0b030",skin:"#e0b48a",hair:"#3a2a22",hatc:"#b02a2a",hat:"kulah",beard:"none",mustache:"thick",hairstyle:"short",age:"young",outfit:"robe",item:"sword",glasses:false}],
+[/füzuli|fuzuli/i,{robe:"#6b4a2e",trim:"#c9a24a",skin:"#d1a37a",hair:"#bdb7aa",hatc:"#e8e2d2",hat:"turban",beard:"long",mustache:"thick",hairstyle:"short",age:"old",outfit:"robe",item:"book",glasses:false}],
+[/rəsulzadə|resulzade|rasulzade/i,{robe:"#2b2f3a",trim:"#c9c9c9",skin:"#e3bf9c",hair:"#6a5a4a",hatc:"#2e2320",hat:"papaq",beard:"none",mustache:"thick",hairstyle:"short",age:"mid",outfit:"coat",item:"none",glasses:true}],
+[/hacıbəyov|hacibeyov|üzeyir|uzeyir/i,{robe:"#33384a",trim:"#c9c9c9",skin:"#e3bf9c",hair:"#2f2a26",hatc:"#2e2320",hat:"none",beard:"none",mustache:"thin",hairstyle:"short",age:"mid",outfit:"coat",item:"book",glasses:true}],
+[/tusi|tusî/i,{robe:"#2a4a7a",trim:"#d9a93a",skin:"#d6a97d",hair:"#cfcac0",hatc:"#e8e2d2",hat:"turban",beard:"long",mustache:"thick",hairstyle:"short",age:"old",outfit:"robe",item:"globe",glasses:false}],
+[/napoleon|napoléon/i,{robe:"#243a6b",trim:"#e0b030",skin:"#e6c4a0",hair:"#4a3a2a",hatc:"#1a1a1a",hat:"bicorn",beard:"none",mustache:"none",hairstyle:"short",age:"mid",outfit:"coat",item:"none",glasses:false}],
+[/atatürk|ataturk/i,{robe:"#2f3541",trim:"#c9c9c9",skin:"#e8c8a8",hair:"#b8a07a",hatc:"#222222",hat:"none",beard:"none",mustache:"thin",hairstyle:"short",age:"mid",outfit:"coat",item:"none",glasses:false}]
+];
+let prof=MED,mode="pick",hist=[],greet="",busy=false,sample=null,ctrl=null;
+const c=(v,d)=>HEX.test(v)?v:d,w=(v,a,d)=>a.includes(v)?v:d;
+function sh(h,a){const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(a<0?v*(1+a):v+(255-v)*a)));return"#"+[n>>16,n>>8&255,n&255].map(v=>f(v).toString(16).padStart(2,"0")).join("")}
+function outfit(p){const R=p.robe,T=p.trim,S=p.skin;let o=`<path d="M26 300 Q30 188 120 166 Q210 188 214 300Z" fill="${R}"/><path d="M150 174 Q202 200 208 300 L214 300 Q210 188 150 170Z" fill="${sh(R,-.3)}" opacity=".45"/>`;
+switch(p.outfit){
+case"coat":o+=`<path d="M98 170 L120 236 L142 170Z" fill="#f4f0e6"/><path d="M92 170 L116 246 L80 262 L66 196Z" fill="${sh(R,-.22)}"/><path d="M148 170 L124 246 L160 262 L174 196Z" fill="${sh(R,-.22)}"/><path d="M104 172 L120 190 L136 172" stroke="#222" stroke-width="3.5" fill="none"/><circle cx="120" cy="256" r="4" fill="${T}"/><circle cx="120" cy="278" r="4" fill="${T}"/>`;break;
+case"armor":o+=`<path d="M64 200 Q120 176 176 200 L168 290 L72 290Z" fill="#aeb6bf" stroke="#5c646c" stroke-width="3"/><path d="M120 190 V290" stroke="#5c646c" stroke-width="3"/><circle cx="46" cy="206" r="22" fill="#9aa3ad" stroke="#5c646c" stroke-width="3"/><circle cx="194" cy="206" r="22" fill="#9aa3ad" stroke="#5c646c" stroke-width="3"/><rect x="72" y="262" width="96" height="10" fill="${T}"/>`;break;
+case"tunic":o+=`<ellipse cx="120" cy="174" rx="27" ry="10" fill="${sh(S,-.1)}" stroke="${T}" stroke-width="6"/><path d="M58 288 H182" stroke="${T}" stroke-width="8"/>`;break;
+case"cloak":o+=`<ellipse cx="120" cy="178" rx="72" ry="20" fill="#efe8dc" stroke="#b9ad98" stroke-width="3" stroke-dasharray="6 4"/><circle cx="120" cy="206" r="8" fill="${T}" stroke="#222" stroke-width="2"/>`;break;
+default:o+=`<path d="M120 200 V300" stroke="${T}" stroke-width="10"/><path d="M86 172 L120 226 L154 172" stroke="${T}" stroke-width="14" fill="none" stroke-linejoin="round"/><path d="M34 262 Q120 280 206 262 L208 274 Q120 292 32 274Z" fill="${T}"/><path d="M84 230 Q100 262 90 296 M156 230 Q140 262 150 296" stroke="${sh(R,-.3)}" stroke-width="2.5" fill="none" opacity=".6"/>`}
+return o}
+function item(p){const T=p.trim;switch(p.item){
+case"scroll":return`<rect x="164" y="266" width="58" height="18" rx="9" fill="#f0e2bd" stroke="#8a6a3a" stroke-width="2"/><ellipse cx="166" cy="275" rx="4" ry="9" fill="#d8c28f" stroke="#8a6a3a"/>`;
+case"sword":return`<rect x="191" y="168" width="7" height="118" fill="#d5dbe0" stroke="#6b737a"/><rect x="178" y="270" width="34" height="7" rx="3" fill="${T}" stroke="#333"/>`;
+case"book":return`<rect x="164" y="254" width="48" height="38" rx="3" fill="#6b3a2a" stroke="#2b2118" stroke-width="2"/><rect x="169" y="259" width="38" height="28" fill="none" stroke="${T}" stroke-width="2"/>`;
+case"quill":return`<path d="M190 280 Q196 240 216 212" stroke="#f4f0e6" stroke-width="4" fill="none"/><path d="M216 212 Q232 226 208 246 Q218 232 216 212Z" fill="#f4f0e6" stroke="#bbb"/>`;
+case"globe":return`<circle cx="194" cy="258" r="24" fill="#4a86c5" stroke="#2b2118" stroke-width="2"/><path d="M174 252 Q190 240 210 256 M180 272 Q196 266 206 274" stroke="#5f9a46" stroke-width="6" fill="none"/>`;
+case"staff":return`<rect x="195" y="150" width="6" height="150" fill="#6b4a2a"/><circle cx="198" cy="148" r="8" fill="${T}" stroke="#333"/>`;
+default:return""}}
+function hat(p){const T=p.trim,R=p.robe,H=p.hatc,D=sh(H,-.35);switch(p.hat){
+case"crown":return`<path d="M84 74 L88 36 L104 58 L120 28 L136 58 L152 36 L156 74Z" fill="#e6b832" stroke="#8a6a10" stroke-width="2.5"/><rect x="84" y="70" width="72" height="9" fill="#c99a1c"/><circle cx="120" cy="46" r="4.5" fill="#c0392b"/><circle cx="96" cy="58" r="3" fill="#2f6fb0"/><circle cx="144" cy="58" r="3" fill="#2f6fb0"/>`;
+case"turban":return`<ellipse cx="120" cy="68" rx="50" ry="30" fill="${H}"/><path d="M72 70 Q120 36 168 70 M76 80 Q120 48 164 80 M86 56 Q120 40 154 56" stroke="${sh(H,-.25)}" stroke-width="3" fill="none"/><circle cx="120" cy="50" r="6" fill="#c0392b" stroke="${T}" stroke-width="2"/>`;
+case"kulah":return`<path d="M86 76 L92 20 Q120 8 148 20 L154 76Z" fill="${H}" stroke="${D}" stroke-width="2"/><path d="M92 30 Q120 22 148 30" stroke="${sh(H,.2)}" stroke-width="3" fill="none"/><ellipse cx="120" cy="74" rx="41" ry="10" fill="#f1ece0" stroke="#b9ad98" stroke-width="2"/><path d="M84 70 Q120 82 156 70" stroke="#d6ccb8" stroke-width="3" fill="none"/>`;
+case"papaq":return`<path d="M80 80 Q72 26 120 24 Q168 26 160 80 Q120 64 80 80Z" fill="${H}" stroke="${D}" stroke-width="2"/><path d="M92 44 l4 6 M108 36 l3 7 M126 36 l-3 7 M142 46 l-4 6 M100 60 l3 6 M138 62 l-3 6" stroke="${sh(H,.25)}" stroke-width="2.5" stroke-linecap="round"/>`;
+case"laurel":return[[80,86,-60],[84,72,-40],[94,62,-20],[108,57,0]].map(([x,y,a])=>`<ellipse cx="${x}" cy="${y}" rx="10" ry="4.5" fill="#4f8a3a" transform="rotate(${a} ${x} ${y})"/><ellipse cx="${240-x}" cy="${y}" rx="10" ry="4.5" fill="#4f8a3a" transform="rotate(${-a} ${240-x} ${y})"/>`).join("");
+case"beret":return`<ellipse cx="128" cy="68" rx="44" ry="17" fill="${H}" transform="rotate(-8 128 68)"/><circle cx="130" cy="52" r="3.5" fill="${H}"/>`;
+case"helmet":return`<path d="M80 92 Q76 30 120 28 Q164 30 160 92 L150 92 Q150 62 120 60 Q90 62 90 92Z" fill="#aeb6bf" stroke="#5c646c" stroke-width="3"/><rect x="116" y="30" width="8" height="32" fill="#5c646c"/><rect x="112" y="60" width="16" height="30" fill="#aeb6bf" stroke="#5c646c" stroke-width="2"/>`;
+case"hood":return`<path d="M70 124 Q58 30 120 26 Q182 30 170 124 L156 98 Q158 64 120 62 Q82 64 84 98Z" fill="${H}"/>`;
+case"bicorn":return`<path d="M50 84 Q62 36 120 44 Q178 36 190 84 Q154 60 120 66 Q86 60 50 84Z" fill="${H}" stroke="#000" stroke-width="2"/><circle cx="120" cy="56" r="5" fill="#c0392b" stroke="#fff"/>`;
+case"fez":return`<path d="M88 74 L96 36 H144 L152 74Z" fill="${H}"/><path d="M120 36 Q150 36 152 62" stroke="#222" stroke-width="2.5" fill="none"/><circle cx="152" cy="64" r="3" fill="#222"/>`;
+case"tophat":return`<rect x="90" y="18" width="60" height="52" fill="${H}"/><rect x="90" y="56" width="60" height="9" fill="${T}"/><ellipse cx="120" cy="70" rx="44" ry="8" fill="${H}"/>`;
+case"tall":return`<rect x="92" y="10" width="56" height="56" fill="${H}"/><rect x="92" y="50" width="56" height="9" fill="${T}"/><ellipse cx="120" cy="66" rx="46" ry="9" fill="${H}"/>`;
+default:return""}}
+function face(p){const S=p.skin,SD=sh(S,-.2),H=p.hair;let f="";
+if(p.hairstyle==="long")f+=`<path d="M78 100 Q70 50 120 52 Q170 50 162 100 Q172 160 160 196 L80 196 Q68 160 78 100Z" fill="${H}"/>`;
+f+=`<ellipse cx="82" cy="106" rx="6" ry="10" fill="${SD}"/><ellipse cx="158" cy="106" rx="6" ry="10" fill="${SD}"/><ellipse cx="120" cy="104" rx="37" ry="42" fill="${S}"/><ellipse cx="98" cy="118" rx="8" ry="5" fill="#e07070" opacity=".22"/><ellipse cx="142" cy="118" rx="8" ry="5" fill="#e07070" opacity=".22"/>`;
+if(p.hairstyle==="short"||p.hairstyle==="long")f+=`<path d="M83 100 Q80 58 120 58 Q160 58 157 100 Q150 80 120 76 Q90 80 83 100Z" fill="${H}"/>`;
+if(p.hairstyle==="balding")f+=`<path d="M84 104 Q78 82 88 72 Q86 90 92 108Z M156 104 Q162 82 152 72 Q154 90 148 108Z" fill="${H}"/>`;
+if(p.age==="old")f+=`<path d="M98 78 Q120 73 142 78 M101 84 Q120 80 139 84 M98 118 Q102 124 100 130 M142 118 Q138 124 140 130" stroke="${SD}" stroke-width="1.7" fill="none"/>`;
+const B=p.beard==="short"?`<path d="M84 108 Q86 150 120 152 Q154 150 156 108 Q150 126 120 128 Q90 126 84 108Z" fill="${H}"/>`:p.beard==="long"?`<path d="M84 108 Q80 170 120 208 Q160 170 156 108 Q150 128 120 130 Q90 128 84 108Z" fill="${H}"/><path d="M108 150 Q106 178 114 196 M132 150 Q134 178 126 196 M120 156 V200" stroke="${sh(H,.25)}" stroke-width="2" fill="none"/>`:p.beard==="pointed"?`<path d="M86 110 Q88 146 120 178 Q152 146 154 110 Q148 128 120 130 Q92 128 86 110Z" fill="${H}"/>`:"";
+f+=B;
+f+=`<path d="M120 102 Q113 118 117 124 Q121 127 126 124" stroke="${SD}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+const M=p.mustache==="thin"?`<path d="M104 125 Q120 118 136 125 Q120 123 104 125Z" fill="${H}" stroke="${H}" stroke-width="2.5"/>`:p.mustache==="thick"?`<path d="M100 127 Q108 116 120 122 Q132 116 140 127 Q130 131 120 127 Q110 131 100 127Z" fill="${H}"/>`:p.mustache==="long"?`<path d="M100 125 Q110 116 120 122 Q130 116 140 125 Q146 142 138 152 Q136 134 120 129 Q104 134 102 152 Q94 142 100 125Z" fill="${H}"/>`:"";
+f+=`<ellipse class="mouth" cx="120" cy="135" rx="8" ry="3.6" fill="#7a2a2a"/>`+M;
+f+=`<path d="M92 90 Q104 84 114 89 M126 89 Q136 84 148 90" stroke="${H}" stroke-width="3.4" fill="none" stroke-linecap="round"/>`;
+f+=[105,135].map(x=>`<g class="eye"><ellipse cx="${x}" cy="100" rx="5.4" ry="3.6" fill="#fff"/><circle cx="${x}" cy="100" r="2.7" fill="#3a2a22"/><circle cx="${x+1}" cy="99" r=".9" fill="#fff"/></g>`).join("");
+if(p.glasses)f+=`<g stroke="#222" stroke-width="2.5" fill="rgba(255,255,255,.18)"><circle cx="105" cy="100" r="11"/><circle cx="135" cy="100" r="11"/><path d="M116 100 H124 M94 98 L84 96 M146 98 L156 96"/></g>`;
+return f}
+function draw(p,talk){const arm=(x,m)=>`<path d="M${x} 210 Q${x+m*28} 256 ${x+m*2} 284" stroke="${p.robe}" stroke-width="30" fill="none" stroke-linecap="round"/>`;
+$("char").innerHTML=`<svg class="ch ${talk?"talk":""}" id="svg" viewBox="0 0 240 300" role="img" aria-label="Aparıcı">${outfit(p)}${arm(44,-1)}${arm(196,1)}<circle cx="46" cy="288" r="11" fill="${p.skin}"/>${item(p)}<circle cx="194" cy="286" r="11" fill="${p.skin}"/><rect x="106" y="146" width="28" height="30" fill="${sh(p.skin,-.12)}"/>${face(p)}${hat(p)}</svg>`}
+function setTalk(on){const s=$("svg");if(s)s.classList.toggle("talk",on)}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function curtain(close){$("stage").classList.toggle("closed",close);await wait(1050)}
+function show(t,talk){$("tx").textContent=t;$("ct").scrollTop=1e9;setTalk(!!talk)}
+function norm(j){return{name:String(j.name||"").slice(0,60),years:String(j.years||"").slice(0,30),persona:String(j.persona||"").slice(0,700),greeting:String(j.greeting||"").slice(0,400),robe:c(j.robe,"#5b6b8c"),trim:c(j.trim,"#e0b030"),skin:c(j.skin,"#e8c39e"),hair:c(j.hair,"#3a2a22"),hatc:c(j.hatc,"#3a2a22"),beard:w(j.beard,["none","short","long","pointed"],"none"),mustache:w(j.mustache,["none","thin","thick","long"],"none"),hairstyle:w(j.hairstyle,["bald","balding","short","long"],"short"),age:w(j.age,["young","mid","old"],"mid"),outfit:w(j.outfit,OUT,"robe"),hat:w(j.hat,HATS,"none"),item:w(j.item,ITEMS,"none"),glasses:j.glasses===true,valid:j.valid!==false}}
+async function summon(name){
+const p="Kimsə tarixi şəxsiyyətlə görüşmək istəyir: «"+name+"». Yalnız JSON qaytar, başqa heç nə yazma. Sahələr: valid (real tarixi şəxsiyyətdirsə true, deyilsə və ya tanımırsansa false), name (tam ad, "+LN[lang]+" dilində), latin (adın latın əlifbası ilə ingiliscə yazılışı), years (həyat illəri), persona (2-3 cümlə: kim idi, hansı dövrdə yaşayıb, danışıq üslubu), greeting (həmin şəxsin öz üslubunda "+LN[lang]+" dilində 1-2 cümləlik salam və özünü təqdim), robe, trim, skin, hair, hatc (hex #rrggbb: geyimin əsas rəngi, haşiyə, dəri, saç və saqqal, baş geyiminin rəngi), hairstyle (bald, balding, short, long), beard (none, short, long, pointed), mustache (none, thin, thick, long), age (young, mid, old), glasses (true/false), outfit (robe, coat, armor, tunic, cloak), hat (none, crown, turban, kulah, papaq, laurel, beret, helmet, hood, bicorn, fez, tophat, tall), item (none, scroll, sword, book, quill, globe, staff). Görünüş şəxsin tarixi portretlərdəki, miniatürlərdəki və ya fotolardakı tanınmış obrazına, dövrünə və mədəniyyətinə mümkün qədər yaxın olsun.";
+const raw=await sample.json(p,{cache:false,signal:ctrl.signal});const j=norm(raw);const k=(j.name+" "+name+" "+String(raw.latin||"")).toLowerCase();for(const[re,v]of PRE)if(re.test(k)){Object.assign(j,v);break}return j}
+async function onSend(){const t=$("inp").value.trim();if(!t||busy)return;
+if(!sample){$("warn").textContent=T("noai");return}
+$("inp").value="";busy=true;$("btn").disabled=true;ctrl=new AbortController();$("last").textContent=T("you")+t;
+try{if(mode==="pick"){
+ $("cloud").style.visibility="hidden";setTalk(false);await curtain(true);
+ let p;try{p=await summon(t)}catch(e){await curtain(false);$("cloud").style.visibility="visible";throw e}
+ if(!p.valid||!p.name){draw(MED,false);$("who").textContent="";$("cloud").style.visibility="visible";await curtain(false);show(T("unk"),true);await wait(1800);setTalk(false)}
+ else{prof=p;hist=[];greet=p.greeting||"Salam!";draw(p,false);$("who").textContent=p.name+(p.years?" · "+p.years:"");$("cloud").style.visibility="visible";await curtain(false);mode="chat";show(greet,true);await wait(Math.min(2500,greet.length*45));setTalk(false);$("inp").placeholder=T("ph2")}
+}else{
+ hist.push({role:"user",content:t});show("…");
+ const pre="Sən "+prof.name+" rolunu oynayırsan. "+prof.persona+" Qaydalar: "+LN[lang]+" dilində, birinci şəxsdə, öz dövrünün ruhunda və danışıq tərzində cavab ver. Yalnız tarixən bilinən faktlara əsaslan, bilmədiyini uydurma. Dövrdən sonrakı şeylər sənə naməlumdur, maraqla qarşıla. 2-5 cümlə yaz. Rolu pozma. Artıq salamlaşmısan: «"+greet+"».\n\nİstifadəçi ilə söhbət:\n";
+ const msgs=hist.map((h,i)=>i===0?{role:"user",content:pre+h.content}:h);
+ try{const r=await sample(msgs,{cache:false,signal:ctrl.signal,onText:({text})=>show(text,true)});show(r.text,false);hist.push({role:"assistant",content:r.text})}catch(e){hist.pop();throw e}
+}}catch(e){setTalk(false);show(e&&e.code==="not_granted"?T("denied"):e&&e.code==="rate_limited"?T("rate"):T("err"))}
+busy=false;$("btn").disabled=false;$("inp").focus()}
+async function reset(){if(busy)return;busy=true;if(ctrl)ctrl.abort();$("cloud").style.visibility="hidden";await curtain(true);prof=MED;mode="pick";hist=[];draw(MED,false);$("who").textContent="";$("last").textContent="";$("inp").placeholder=T("ph1");$("cloud").style.visibility="visible";await curtain(false);show(T("greet"),true);await wait(1800);setTalk(false);busy=false;$("btn").disabled=false}
+$("btn").onclick=onSend;$("back").onclick=reset;$("inp").addEventListener("keydown",e=>{if(e.key==="Enter")onSend()});
+draw(MED,true);applyLang();show(T("greet"),true);setTimeout(()=>setTalk(false),1800);document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+async function callApi(messages,signal){const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages}),signal});if(!r.ok){const e=new Error("api");e.code=r.status===429?"rate_limited":"error";throw e}return(await r.json()).text}
+sample=async(m,o={})=>{const t=await callApi(m,o.signal);if(o.onText)o.onText({text:t});return{text:t}};
+sample.json=async(p,o={})=>{const t=await callApi([{role:"user",content:p}],o.signal);return JSON.parse(t.replace(/```json|```/g,"").trim())};
+</script>
+</body>
+</html>

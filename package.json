@@ -1,0 +1,9 @@
+{
+  "name": "chatwithhistory-free",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.21.0", "express-rate-limit": "^7.4.0" }
+}
