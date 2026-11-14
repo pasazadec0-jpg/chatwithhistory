@@ -66,14 +66,14 @@ button.alt{background:transparent;color:var(--accent);border:1px solid var(--acc
     <div class="curt l"></div><div class="curt r"></div><div class="val"></div>
   </div>
   <div class="last" id="last"></div>
-  <div class="row"><input id="inp" placeholder="Şəxsiyyətin adını yazın…" autocomplete="off"><button id="btn">Göndər</button><button class="alt" id="back" title="Başqa şəxsiyyət">↺</button></div>
+  <div class="row"><input id="inp" placeholder="Şəxsiyyətin adını yazın…" autocomplete="off"><button id="btn">Göndər</button><button class="alt" id="back" title="Başqa şəxsiyyət">↺</button><button class="alt" id="snd" title="Səs">🔊</button></div>
   <p class="note" id="warn">Cavablar süni intellekt tərəfindən canlandırılır və tam dəqiq olmaya bilər.</p>
 </div>
 <script>
 const $=id=>document.getElementById(id);
 const HEX=/^#[0-9a-f]{6}$/i;
 const HATS=["none","crown","turban","kulah","papaq","laurel","beret","helmet","hood","bicorn","fez","tophat","tall"],ITEMS=["none","scroll","sword","book","quill","globe","staff"],OUT=["robe","coat","armor","tunic","cloak"];
-const MED={name:"",robe:"#4f6a94",trim:"#e0b030",skin:"#e8c39e",hair:"#4a3326",hatc:"#c0392b",hat:"beret",beard:"none",mustache:"none",hairstyle:"short",age:"young",outfit:"coat",item:"scroll",glasses:false};
+const MED={gender:"male",name:"",robe:"#4f6a94",trim:"#e0b030",skin:"#e8c39e",hair:"#4a3326",hatc:"#c0392b",hat:"beret",beard:"none",mustache:"none",hairstyle:"short",age:"young",outfit:"coat",item:"scroll",glasses:false};
 const LN={az:"Azərbaycan",en:"ingilis",ru:"rus"};
 const I18N={
  az:{title:"⏳ ChatWithHistory",greet:"Salam! Bu gün hansı şəxsiyyətlə görüşmək istərdiniz?",ph1:"Şəxsiyyətin adını yazın…",ph2:"Sualınızı yazın…",send:"Göndər",back:"Başqa şəxsiyyət",note:"Cavablar süni intellekt tərəfindən canlandırılır və tam dəqiq olmaya bilər.",noai:"Süni intellekt bu görünüşdə əlçatan deyil. Səhifəni claude.ai hesabınızla açın.",you:"Siz: ",unk:"Bağışlayın, bu adı tarixi şəxsiyyət kimi tanımadım. Başqa ad deyin.",denied:"İcazə verilmədi. Yenidən cəhd edin.",rate:"Çox sorğu göndərildi, bir az gözləyin.",err:"Xəta baş verdi. Yenidən cəhd edin."},
@@ -83,7 +83,7 @@ const I18N={
 let lang="az";try{const s=localStorage.getItem("lang");if(I18N[s])lang=s}catch(e){}
 const T=k=>I18N[lang][k];
 function applyLang(){document.documentElement.lang=lang;$("h1").textContent=T("title");$("btn").textContent=T("send");$("back").title=T("back");$("warn").textContent=T("note");$("inp").placeholder=mode==="pick"?T("ph1"):T("ph2");document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on",b.dataset.l===lang))}
-async function setLang(l){if(l===lang||busy)return;lang=l;try{localStorage.setItem("lang",l)}catch(e){}applyLang();if(mode==="pick"){show(T("greet"),true);setTimeout(()=>setTalk(false),1800)}else reset()}
+async function setLang(l){if(l===lang||busy)return;lang=l;try{localStorage.setItem("lang",l)}catch(e){}applyLang();if(mode==="pick"){show(T("greet"),false);talk(T("greet"),MED)}else reset()}
 const PRE=[
 [/nizami/i,{robe:"#2f5d50",trim:"#d9a93a",skin:"#d6a97d",hair:"#d8d4cb",hatc:"#7b2d26",hat:"kulah",beard:"long",mustache:"thick",hairstyle:"short",age:"old",outfit:"robe",item:"quill",glasses:false}],
 [/xətai|xetai|ismayıl|ismail/i,{robe:"#a3262a",trim:"#e0b030",skin:"#e0b48a",hair:"#3a2a22",hatc:"#b02a2a",hat:"kulah",beard:"none",mustache:"thick",hairstyle:"short",age:"young",outfit:"robe",item:"sword",glasses:false}],
@@ -146,33 +146,45 @@ function draw(p,talk){const arm=(x,m)=>`<path d="M${x} 210 Q${x+m*28} 256 ${x+m*
 $("char").innerHTML=`<svg class="ch ${talk?"talk":""}" id="svg" viewBox="0 0 240 300" role="img" aria-label="Aparıcı">${outfit(p)}${arm(44,-1)}${arm(196,1)}<circle cx="46" cy="288" r="11" fill="${p.skin}"/>${item(p)}<circle cx="194" cy="286" r="11" fill="${p.skin}"/><rect x="106" y="146" width="28" height="30" fill="${sh(p.skin,-.12)}"/>${face(p)}${hat(p)}</svg>`}
 function setTalk(on){const s=$("svg");if(s)s.classList.toggle("talk",on)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+let voiceOn=true;const SS=window.speechSynthesis,LC={az:"az-AZ",en:"en-US",ru:"ru-RU"};
+function stopTalk(){if(SS)SS.cancel()}
+function pickVoice(g){if(!SS)return null;const vs=SS.getVoices();let L=vs.filter(v=>v.lang.toLowerCase().startsWith(lang));if(!L.length&&lang==="az")L=vs.filter(v=>v.lang.toLowerCase().startsWith("tr"));if(!L.length)return null;
+L.sort((a,b)=>/natural|online/i.test(b.name)-/natural|online/i.test(a.name));
+const re=g==="female"?/banu|emel|svetlana|irina|aria|jenny|zira|hazel|susan|sonia|libby|\bfemale\b|woman/i:/babek|ahmet|dmitry|pavel|guy|davis|christopher|david|mark|george|james|ryan|\bmale\b/i;
+const hit=L.find(v=>re.test(v.name));return{v:hit||L[0],exact:!!hit}}
+function talk(text,p){if(!voiceOn||!SS){setTalk(true);setTimeout(()=>setTalk(false),Math.min(2500,text.length*45));return}
+SS.cancel();const g=p.gender||"male",pk=pickVoice(g),u=new SpeechSynthesisUtterance(text);
+if(pk){u.voice=pk.v;u.lang=pk.v.lang}else u.lang=LC[lang];
+let pitch=(g==="female"?1.12:.82)+(p.age==="old"?-.1:p.age==="young"?.1:0);if(pk&&pk.exact)pitch=1+(pitch-1)*.5;
+u.pitch=Math.max(.5,Math.min(1.6,pitch));u.rate=p.age==="old"?.88:p.age==="young"?1.02:.95;
+u.onstart=()=>setTalk(true);u.onend=u.onerror=()=>setTalk(false);SS.speak(u)}
 async function curtain(close){$("stage").classList.toggle("closed",close);await wait(1050)}
 function show(t,talk){$("tx").textContent=t;$("ct").scrollTop=1e9;setTalk(!!talk)}
-function norm(j){return{name:String(j.name||"").slice(0,60),years:String(j.years||"").slice(0,30),persona:String(j.persona||"").slice(0,700),greeting:String(j.greeting||"").slice(0,400),robe:c(j.robe,"#5b6b8c"),trim:c(j.trim,"#e0b030"),skin:c(j.skin,"#e8c39e"),hair:c(j.hair,"#3a2a22"),hatc:c(j.hatc,"#3a2a22"),beard:w(j.beard,["none","short","long","pointed"],"none"),mustache:w(j.mustache,["none","thin","thick","long"],"none"),hairstyle:w(j.hairstyle,["bald","balding","short","long"],"short"),age:w(j.age,["young","mid","old"],"mid"),outfit:w(j.outfit,OUT,"robe"),hat:w(j.hat,HATS,"none"),item:w(j.item,ITEMS,"none"),glasses:j.glasses===true,valid:j.valid!==false}}
+function norm(j){return{name:String(j.name||"").slice(0,60),years:String(j.years||"").slice(0,30),persona:String(j.persona||"").slice(0,700),greeting:String(j.greeting||"").slice(0,400),robe:c(j.robe,"#5b6b8c"),trim:c(j.trim,"#e0b030"),skin:c(j.skin,"#e8c39e"),hair:c(j.hair,"#3a2a22"),hatc:c(j.hatc,"#3a2a22"),beard:w(j.beard,["none","short","long","pointed"],"none"),mustache:w(j.mustache,["none","thin","thick","long"],"none"),hairstyle:w(j.hairstyle,["bald","balding","short","long"],"short"),age:w(j.age,["young","mid","old"],"mid"),gender:w(j.gender,["male","female"],"male"),outfit:w(j.outfit,OUT,"robe"),hat:w(j.hat,HATS,"none"),item:w(j.item,ITEMS,"none"),glasses:j.glasses===true,valid:j.valid!==false}}
 async function summon(name){
-const p="Kimsə tarixi şəxsiyyətlə görüşmək istəyir: «"+name+"». Yalnız JSON qaytar, başqa heç nə yazma. Sahələr: valid (real tarixi şəxsiyyətdirsə true, deyilsə və ya tanımırsansa false), name (tam ad, "+LN[lang]+" dilində), latin (adın latın əlifbası ilə ingiliscə yazılışı), years (həyat illəri), persona (2-3 cümlə: kim idi, hansı dövrdə yaşayıb, danışıq üslubu), greeting (həmin şəxsin öz üslubunda "+LN[lang]+" dilində 1-2 cümləlik salam və özünü təqdim), robe, trim, skin, hair, hatc (hex #rrggbb: geyimin əsas rəngi, haşiyə, dəri, saç və saqqal, baş geyiminin rəngi), hairstyle (bald, balding, short, long), beard (none, short, long, pointed), mustache (none, thin, thick, long), age (young, mid, old), glasses (true/false), outfit (robe, coat, armor, tunic, cloak), hat (none, crown, turban, kulah, papaq, laurel, beret, helmet, hood, bicorn, fez, tophat, tall), item (none, scroll, sword, book, quill, globe, staff). Görünüş şəxsin tarixi portretlərdəki, miniatürlərdəki və ya fotolardakı tanınmış obrazına, dövrünə və mədəniyyətinə mümkün qədər yaxın olsun.";
+const p="Kimsə tarixi şəxsiyyətlə görüşmək istəyir: «"+name+"». Yalnız JSON qaytar, başqa heç nə yazma. Sahələr: valid (real tarixi şəxsiyyətdirsə true, deyilsə və ya tanımırsansa false), name (tam ad, "+LN[lang]+" dilində), latin (adın latın əlifbası ilə ingiliscə yazılışı), years (həyat illəri), persona (2-3 cümlə: kim idi, hansı dövrdə yaşayıb, danışıq üslubu), greeting (həmin şəxsin öz üslubunda "+LN[lang]+" dilində 1-2 cümləlik salam və özünü təqdim), robe, trim, skin, hair, hatc (hex #rrggbb: geyimin əsas rəngi, haşiyə, dəri, saç və saqqal, baş geyiminin rəngi), hairstyle (bald, balding, short, long), beard (none, short, long, pointed), mustache (none, thin, thick, long), age (young, mid, old), gender (male, female), glasses (true/false), outfit (robe, coat, armor, tunic, cloak), hat (none, crown, turban, kulah, papaq, laurel, beret, helmet, hood, bicorn, fez, tophat, tall), item (none, scroll, sword, book, quill, globe, staff). Görünüş şəxsin tarixi portretlərdəki, miniatürlərdəki və ya fotolardakı tanınmış obrazına, dövrünə və mədəniyyətinə mümkün qədər yaxın olsun.";
 const raw=await sample.json(p,{cache:false,signal:ctrl.signal});const j=norm(raw);const k=(j.name+" "+name+" "+String(raw.latin||"")).toLowerCase();for(const[re,v]of PRE)if(re.test(k)){Object.assign(j,v);break}return j}
 async function onSend(){const t=$("inp").value.trim();if(!t||busy)return;
 if(!sample){$("warn").textContent=T("noai");return}
-$("inp").value="";busy=true;$("btn").disabled=true;ctrl=new AbortController();$("last").textContent=T("you")+t;
+$("inp").value="";stopTalk();busy=true;$("btn").disabled=true;ctrl=new AbortController();$("last").textContent=T("you")+t;
 try{if(mode==="pick"){
  $("cloud").style.visibility="hidden";setTalk(false);await curtain(true);
  let p;try{p=await summon(t)}catch(e){await curtain(false);$("cloud").style.visibility="visible";throw e}
- if(!p.valid||!p.name){draw(MED,false);$("who").textContent="";$("cloud").style.visibility="visible";await curtain(false);show(T("unk"),true);await wait(1800);setTalk(false)}
- else{prof=p;hist=[];greet=p.greeting||"Salam!";draw(p,false);$("who").textContent=p.name+(p.years?" · "+p.years:"");$("cloud").style.visibility="visible";await curtain(false);mode="chat";show(greet,true);await wait(Math.min(2500,greet.length*45));setTalk(false);$("inp").placeholder=T("ph2")}
+ if(!p.valid||!p.name){draw(MED,false);$("who").textContent="";$("cloud").style.visibility="visible";await curtain(false);show(T("unk"),false);talk(T("unk"),MED)}
+ else{prof=p;hist=[];greet=p.greeting||"Salam!";draw(p,false);$("who").textContent=p.name+(p.years?" · "+p.years:"");$("cloud").style.visibility="visible";await curtain(false);mode="chat";show(greet,false);talk(greet,p);$("inp").placeholder=T("ph2")}
 }else{
  hist.push({role:"user",content:t});show("…");
  const pre="Sən "+prof.name+" rolunu oynayırsan. "+prof.persona+" Qaydalar: "+LN[lang]+" dilində, birinci şəxsdə, öz dövrünün ruhunda və danışıq tərzində cavab ver. Yalnız tarixən bilinən faktlara əsaslan, bilmədiyini uydurma. Dövrdən sonrakı şeylər sənə naməlumdur, maraqla qarşıla. 2-5 cümlə yaz. Rolu pozma. Artıq salamlaşmısan: «"+greet+"».\n\nİstifadəçi ilə söhbət:\n";
  const msgs=hist.map((h,i)=>i===0?{role:"user",content:pre+h.content}:h);
- try{const r=await sample(msgs,{cache:false,signal:ctrl.signal,onText:({text})=>show(text,true)});show(r.text,false);hist.push({role:"assistant",content:r.text})}catch(e){hist.pop();throw e}
+ try{const r=await sample(msgs,{cache:false,signal:ctrl.signal,onText:({text})=>show(text,true)});show(r.text,false);talk(r.text,prof);hist.push({role:"assistant",content:r.text})}catch(e){hist.pop();throw e}
 }}catch(e){setTalk(false);show(e&&e.code==="not_granted"?T("denied"):e&&e.code==="rate_limited"?T("rate"):T("err"))}
 busy=false;$("btn").disabled=false;$("inp").focus()}
-async function reset(){if(busy)return;busy=true;if(ctrl)ctrl.abort();$("cloud").style.visibility="hidden";await curtain(true);prof=MED;mode="pick";hist=[];draw(MED,false);$("who").textContent="";$("last").textContent="";$("inp").placeholder=T("ph1");$("cloud").style.visibility="visible";await curtain(false);show(T("greet"),true);await wait(1800);setTalk(false);busy=false;$("btn").disabled=false}
+async function reset(){if(busy)return;busy=true;if(ctrl)ctrl.abort();$("cloud").style.visibility="hidden";await curtain(true);prof=MED;mode="pick";hist=[];draw(MED,false);$("who").textContent="";$("last").textContent="";$("inp").placeholder=T("ph1");$("cloud").style.visibility="visible";await curtain(false);show(T("greet"),false);talk(T("greet"),MED);busy=false;$("btn").disabled=false}
 $("btn").onclick=onSend;$("back").onclick=reset;$("inp").addEventListener("keydown",e=>{if(e.key==="Enter")onSend()});
-draw(MED,true);applyLang();show(T("greet"),true);setTimeout(()=>setTalk(false),1800);document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>setLang(b.dataset.l));
-async function callApi(messages,signal){const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages}),signal});if(!r.ok){const e=new Error("api");e.code=r.status===429?"rate_limited":"error";throw e}return(await r.json()).text}
+draw(MED,true);applyLang();show(T("greet"),true);setTimeout(()=>setTalk(false),1800);document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>setLang(b.dataset.l));$("snd").onclick=()=>{voiceOn=!voiceOn;$("snd").textContent=voiceOn?"🔊":"🔇";if(!voiceOn)stopTalk()};if(SS)SS.getVoices();
+async function callApi(messages,signal,json){const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages,json:!!json}),signal});if(!r.ok){const e=new Error("api");e.code=r.status===429?"rate_limited":"error";throw e}return(await r.json()).text}
 sample=async(m,o={})=>{const t=await callApi(m,o.signal);if(o.onText)o.onText({text:t});return{text:t}};
-sample.json=async(p,o={})=>{const t=await callApi([{role:"user",content:p}],o.signal);return JSON.parse(t.replace(/```json|```/g,"").trim())};
+sample.json=async(p,o={})=>{for(let i=0;;i++){try{const t=await callApi([{role:"user",content:p}],o.signal,true);return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1))}catch(e){if(i||(e&&e.code==="rate_limited"))throw e}}};
 </script>
 </body>
 </html>
