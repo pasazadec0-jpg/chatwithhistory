@@ -27,6 +27,7 @@ h1{font-size:clamp(1.5rem,5vw,2.1rem);margin:.2em 0 .6em;text-align:center;color
 .who:empty{display:none}
 #char{position:relative;z-index:3;margin-bottom:-4px}
 svg.ch{display:block;width:min(46vw,210px);height:auto}
+.wait{position:absolute;inset:0;z-index:7;display:grid;place-items:center;color:#f4e3c0;font-size:1.15rem;text-shadow:0 2px 6px #000;opacity:0;pointer-events:none;transition:opacity .6s}.stage.closed .wait{opacity:1}
 .curt{position:absolute;top:0;bottom:0;width:51%;z-index:5;transition:transform 1s ease-in-out;background:repeating-linear-gradient(90deg,var(--cur) 0 18px,var(--cur2) 18px 36px);box-shadow:inset 0 0 40px rgba(0,0,0,.45)}
 .curt.l{left:0;transform:translateX(-100%)}.curt.r{right:0;transform:translateX(100%)}
 .stage.closed .curt{transform:translateX(0)}
@@ -63,7 +64,7 @@ button.alt{background:transparent;color:var(--accent);border:1px solid var(--acc
     </div>
     <div id="char"></div>
     <div class="who" id="who"></div>
-    <div class="curt l"></div><div class="curt r"></div><div class="val"></div>
+    <div class="curt l"></div><div class="curt r"></div><div class="val"></div><div class="wait" id="wait"></div>
   </div>
   <div class="last" id="last"></div>
   <div class="row"><input id="inp" placeholder="Şəxsiyyətin adını yazın…" autocomplete="off"><button id="btn">Göndər</button><button class="alt" id="back" title="Başqa şəxsiyyət">↺</button><button class="alt" id="snd" title="Səs">🔊</button></div>
@@ -76,13 +77,13 @@ const HATS=["none","crown","turban","kulah","papaq","laurel","beret","helmet","h
 const MED={gender:"male",name:"",robe:"#4f6a94",trim:"#e0b030",skin:"#e8c39e",hair:"#4a3326",hatc:"#c0392b",hat:"beret",beard:"none",mustache:"none",hairstyle:"short",age:"young",outfit:"coat",item:"scroll",glasses:false};
 const LN={az:"Azərbaycan",en:"ingilis",ru:"rus"};
 const I18N={
- az:{title:"⏳ ChatWithHistory",greet:"Salam! Bu gün hansı şəxsiyyətlə görüşmək istərdiniz?",ph1:"Şəxsiyyətin adını yazın…",ph2:"Sualınızı yazın…",send:"Göndər",back:"Başqa şəxsiyyət",note:"Cavablar süni intellekt tərəfindən canlandırılır və tam dəqiq olmaya bilər.",noai:"Süni intellekt bu görünüşdə əlçatan deyil. Səhifəni claude.ai hesabınızla açın.",you:"Siz: ",unk:"Bağışlayın, bu adı tarixi şəxsiyyət kimi tanımadım. Başqa ad deyin.",denied:"İcazə verilmədi. Yenidən cəhd edin.",rate:"Çox sorğu göndərildi, bir az gözləyin.",err:"Xəta baş verdi. Yenidən cəhd edin."},
- en:{title:"⏳ ChatWithHistory",greet:"Hello! Which historical figure would you like to meet today?",ph1:"Type a name…",ph2:"Type your question…",send:"Send",back:"Another figure",note:"Replies are brought to life by AI and may not be fully accurate.",noai:"AI is not available in this view. Open the page with your claude.ai account.",you:"You: ",unk:"Sorry, I don’t recognize that name as a historical figure. Try another one.",denied:"Permission was not granted. Please try again.",rate:"Too many requests, please wait a moment.",err:"Something went wrong. Please try again."},
- ru:{title:"⏳ ChatWithHistory",greet:"Здравствуйте! С какой исторической личностью вы хотели бы встретиться сегодня?",ph1:"Введите имя…",ph2:"Введите ваш вопрос…",send:"Отправить",back:"Другая личность",note:"Ответы создаёт ИИ, они могут быть неточными.",noai:"ИИ недоступен в этом режиме. Откройте страницу в своём аккаунте claude.ai.",you:"Вы: ",unk:"Простите, я не узнаю это имя как историческую личность. Назовите другое.",denied:"Разрешение не получено. Попробуйте ещё раз.",rate:"Слишком много запросов, подождите немного.",err:"Произошла ошибка. Попробуйте ещё раз."}
+ az:{title:"⏳ ChatWithHistory",greet:"Salam! Bu gün hansı şəxsiyyətlə görüşmək istərdiniz?",ph1:"Şəxsiyyətin adını yazın…",ph2:"Sualınızı yazın…",send:"Göndər",back:"Başqa şəxsiyyət",note:"Cavablar süni intellekt tərəfindən canlandırılır və tam dəqiq olmaya bilər.",noai:"Süni intellekt bu görünüşdə əlçatan deyil. Səhifəni claude.ai hesabınızla açın.",you:"Siz: ",unk:"Bağışlayın, bu adı tarixi şəxsiyyət kimi tanımadım. Başqa ad deyin.",denied:"İcazə verilmədi. Yenidən cəhd edin.",rate:"Çox sorğu göndərildi, bir az gözləyin.",err:"Xəta baş verdi. Yenidən cəhd edin.",dress:"Şəxsiyyət geyinir…"},
+ en:{title:"⏳ ChatWithHistory",greet:"Hello! Which historical figure would you like to meet today?",ph1:"Type a name…",ph2:"Type your question…",send:"Send",back:"Another figure",note:"Replies are brought to life by AI and may not be fully accurate.",noai:"AI is not available in this view. Open the page with your claude.ai account.",you:"You: ",unk:"Sorry, I don’t recognize that name as a historical figure. Try another one.",denied:"Permission was not granted. Please try again.",rate:"Too many requests, please wait a moment.",err:"Something went wrong. Please try again.",dress:"Getting dressed…"},
+ ru:{title:"⏳ ChatWithHistory",greet:"Здравствуйте! С какой исторической личностью вы хотели бы встретиться сегодня?",ph1:"Введите имя…",ph2:"Введите ваш вопрос…",send:"Отправить",back:"Другая личность",note:"Ответы создаёт ИИ, они могут быть неточными.",noai:"ИИ недоступен в этом режиме. Откройте страницу в своём аккаунте claude.ai.",you:"Вы: ",unk:"Простите, я не узнаю это имя как историческую личность. Назовите другое.",denied:"Разрешение не получено. Попробуйте ещё раз.",rate:"Слишком много запросов, подождите немного.",err:"Произошла ошибка. Попробуйте ещё раз.",dress:"Переодевается…"}
 };
 let lang="az";try{const s=localStorage.getItem("lang");if(I18N[s])lang=s}catch(e){}
 const T=k=>I18N[lang][k];
-function applyLang(){document.documentElement.lang=lang;$("h1").textContent=T("title");$("btn").textContent=T("send");$("back").title=T("back");$("warn").textContent=T("note");$("inp").placeholder=mode==="pick"?T("ph1"):T("ph2");document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on",b.dataset.l===lang))}
+function applyLang(){document.documentElement.lang=lang;$("h1").textContent=T("title");$("btn").textContent=T("send");$("back").title=T("back");$("warn").textContent=T("note");$("wait").textContent=T("dress");$("inp").placeholder=mode==="pick"?T("ph1"):T("ph2");document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on",b.dataset.l===lang))}
 async function setLang(l){if(l===lang||busy)return;lang=l;try{localStorage.setItem("lang",l)}catch(e){}applyLang();if(mode==="pick"){show(T("greet"),false);talk(T("greet"),MED)}else reset()}
 const PRE=[
 [/nizami/i,{robe:"#2f5d50",trim:"#d9a93a",skin:"#d6a97d",hair:"#d8d4cb",hatc:"#7b2d26",hat:"kulah",beard:"long",mustache:"thick",hairstyle:"short",age:"old",outfit:"robe",item:"quill",glasses:false}],
@@ -166,7 +167,7 @@ const p="Kimsə tarixi şəxsiyyətlə görüşmək istəyir: «"+name+"». Yaln
 const raw=await sample.json(p,{cache:false,signal:ctrl.signal});const j=norm(raw);const k=(j.name+" "+name+" "+String(raw.latin||"")).toLowerCase();for(const[re,v]of PRE)if(re.test(k)){Object.assign(j,v);break}return j}
 async function onSend(){const t=$("inp").value.trim();if(!t||busy)return;
 if(!sample){$("warn").textContent=T("noai");return}
-$("inp").value="";stopTalk();busy=true;$("btn").disabled=true;ctrl=new AbortController();$("last").textContent=T("you")+t;
+$("inp").value="";stopTalk();busy=true;$("btn").disabled=true;ctrl=new AbortController();setTimeout(c=>c.abort(),60000,ctrl);$("last").textContent=T("you")+t;
 try{if(mode==="pick"){
  $("cloud").style.visibility="hidden";setTalk(false);await curtain(true);
  let p;try{p=await summon(t)}catch(e){await curtain(false);$("cloud").style.visibility="visible";throw e}
@@ -177,7 +178,7 @@ try{if(mode==="pick"){
  const pre="Sən "+prof.name+" rolunu oynayırsan. "+prof.persona+" Qaydalar: "+LN[lang]+" dilində, birinci şəxsdə, öz dövrünün ruhunda və danışıq tərzində cavab ver. Yalnız tarixən bilinən faktlara əsaslan, bilmədiyini uydurma. Dövrdən sonrakı şeylər sənə naməlumdur, maraqla qarşıla. 2-5 cümlə yaz. Rolu pozma. Artıq salamlaşmısan: «"+greet+"».\n\nİstifadəçi ilə söhbət:\n";
  const msgs=hist.map((h,i)=>i===0?{role:"user",content:pre+h.content}:h);
  try{const r=await sample(msgs,{cache:false,signal:ctrl.signal,onText:({text})=>show(text,true)});show(r.text,false);talk(r.text,prof);hist.push({role:"assistant",content:r.text})}catch(e){hist.pop();throw e}
-}}catch(e){setTalk(false);show(e&&e.code==="not_granted"?T("denied"):e&&e.code==="rate_limited"?T("rate"):T("err"))}
+}}catch(e){console.error(e);setTalk(false);$("cloud").style.visibility="visible";show(e&&e.code==="not_granted"?T("denied"):e&&e.code==="rate_limited"?T("rate"):T("err"));if($("stage").classList.contains("closed"))await curtain(false)}
 busy=false;$("btn").disabled=false;$("inp").focus()}
 async function reset(){if(busy)return;busy=true;if(ctrl)ctrl.abort();$("cloud").style.visibility="hidden";await curtain(true);prof=MED;mode="pick";hist=[];draw(MED,false);$("who").textContent="";$("last").textContent="";$("inp").placeholder=T("ph1");$("cloud").style.visibility="visible";await curtain(false);show(T("greet"),false);talk(T("greet"),MED);busy=false;$("btn").disabled=false}
 $("btn").onclick=onSend;$("back").onclick=reset;$("inp").addEventListener("keydown",e=>{if(e.key==="Enter")onSend()});
