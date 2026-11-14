@@ -27,7 +27,7 @@ const valid = (m) =>
     typeof x.content === "string" && x.content.length > 0 && x.content.length <= 4000);
 
 app.post("/api/chat", limiter, async (req, res) => {
-  const { messages } = req.body || {};
+  const { messages, json } = req.body || {};
   if (!KEY) return res.status(500).json({ error: "no_key" });
   if (!valid(messages)) return res.status(400).json({ error: "bad_request" });
   try {
@@ -42,7 +42,16 @@ app.post("/api/chat", limiter, async (req, res) => {
             role: m.role === "assistant" ? "model" : "user",
             parts: [{ text: m.content }],
           })),
-          generationConfig: { maxOutputTokens: 1000 },
+          generationConfig: {
+            maxOutputTokens: json ? 4096 : 2048,
+            ...(json ? { responseMimeType: "application/json" } : {}),
+          },
+          safetySettings: [
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT",
+          ].map((category) => ({ category, threshold: "BLOCK_ONLY_HIGH" })),
         }),
       }
     );
@@ -53,6 +62,10 @@ app.post("/api/chat", limiter, async (req, res) => {
     }
     const d = await r.json();
     const text = (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+    if (!text) {
+      console.error("empty reply", d.promptFeedback, d.candidates?.[0]?.finishReason);
+      return res.status(502).json({ error: "empty" });
+    }
     res.json({ text });
   } catch (e) {
     console.error(e.message);
