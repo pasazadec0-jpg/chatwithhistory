@@ -167,7 +167,7 @@ const p="Kimsə tarixi şəxsiyyətlə görüşmək istəyir: «"+name+"». Yaln
 const raw=await sample.json(p,{cache:false,signal:ctrl.signal});const j=norm(raw);const k=(j.name+" "+name+" "+String(raw.latin||"")).toLowerCase();for(const[re,v]of PRE)if(re.test(k)){Object.assign(j,v);break}return j}
 async function onSend(){const t=$("inp").value.trim();if(!t||busy)return;
 if(!sample){$("warn").textContent=T("noai");return}
-$("inp").value="";stopTalk();busy=true;$("btn").disabled=true;ctrl=new AbortController();setTimeout(c=>c.abort(),60000,ctrl);$("last").textContent=T("you")+t;
+$("inp").value="";stopTalk();busy=true;$("btn").disabled=true;ctrl=new AbortController();setTimeout(c=>c.abort(),80000,ctrl);$("last").textContent=T("you")+t;
 try{if(mode==="pick"){
  $("cloud").style.visibility="hidden";setTalk(false);await curtain(true);
  let p;try{p=await summon(t)}catch(e){await curtain(false);$("cloud").style.visibility="visible";throw e}
